@@ -245,6 +245,9 @@ class Unet(object):
                 union = eps + tf.reduce_sum(prediction) + tf.reduce_sum(self.y)
                 loss = -(2 * intersection / (union))
 
+            elif cost_name == "mse":
+                loss = tf.losses.mean_squared_error(logits, self.y)
+
             else:
                 raise ValueError("Unknown cost function: " % cost_name)
 
