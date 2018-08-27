@@ -2,12 +2,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # tf_unet is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with tf_unet.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -82,11 +82,14 @@ def create_conv_net(x, keep_prob, channels, n_class, layers=3, features_root=16,
             features = 2 ** layer * features_root
             stddev = np.sqrt(2 / (filter_size ** 2 * features))
             if layer == 0:
-                w1 = weight_variable([filter_size, filter_size, channels, features], stddev, name="w1")
+                w1 = weight_variable(
+                    [filter_size, filter_size, channels, features], stddev, name="w1")
             else:
-                w1 = weight_variable([filter_size, filter_size, features // 2, features], stddev, name="w1")
+                w1 = weight_variable(
+                    [filter_size, filter_size, features // 2, features], stddev, name="w1")
 
-            w2 = weight_variable([filter_size, filter_size, features, features], stddev, name="w2")
+            w2 = weight_variable(
+                [filter_size, filter_size, features, features], stddev, name="w2")
             b1 = bias_variable([features], name="b1")
             b2 = bias_variable([features], name="b2")
 
@@ -113,14 +116,17 @@ def create_conv_net(x, keep_prob, channels, n_class, layers=3, features_root=16,
             features = 2 ** (layer + 1) * features_root
             stddev = np.sqrt(2 / (filter_size ** 2 * features))
 
-            wd = weight_variable_devonc([pool_size, pool_size, features // 2, features], stddev, name="wd")
+            wd = weight_variable_devonc(
+                [pool_size, pool_size, features // 2, features], stddev, name="wd")
             bd = bias_variable([features // 2], name="bd")
             h_deconv = tf.nn.relu(deconv2d(in_node, wd, pool_size) + bd)
             h_deconv_concat = crop_and_concat(dw_h_convs[layer], h_deconv)
             deconv[layer] = h_deconv_concat
 
-            w1 = weight_variable([filter_size, filter_size, features, features // 2], stddev, name="w1")
-            w2 = weight_variable([filter_size, filter_size, features // 2, features // 2], stddev, name="w2")
+            w1 = weight_variable(
+                [filter_size, filter_size, features, features // 2], stddev, name="w1")
+            w2 = weight_variable(
+                [filter_size, filter_size, features // 2, features // 2], stddev, name="w2")
             b1 = bias_variable([features // 2], name="b1")
             b2 = bias_variable([features // 2], name="b2")
 
@@ -148,20 +154,26 @@ def create_conv_net(x, keep_prob, channels, n_class, layers=3, features_root=16,
     if summaries:
         with tf.name_scope("summaries"):
             for i, (c1, c2) in enumerate(convs):
-                tf.summary.image('summary_conv_%02d_01' % i, get_image_summary(c1))
-                tf.summary.image('summary_conv_%02d_02' % i, get_image_summary(c2))
+                tf.summary.image('summary_conv_%02d_01' %
+                                 i, get_image_summary(c1))
+                tf.summary.image('summary_conv_%02d_02' %
+                                 i, get_image_summary(c2))
 
             for k in pools.keys():
-                tf.summary.image('summary_pool_%02d' % k, get_image_summary(pools[k]))
+                tf.summary.image('summary_pool_%02d' %
+                                 k, get_image_summary(pools[k]))
 
             for k in deconv.keys():
-                tf.summary.image('summary_deconv_concat_%02d' % k, get_image_summary(deconv[k]))
+                tf.summary.image('summary_deconv_concat_%02d' %
+                                 k, get_image_summary(deconv[k]))
 
             for k in dw_h_convs.keys():
-                tf.summary.histogram("dw_convolution_%02d" % k + '/activations', dw_h_convs[k])
+                tf.summary.histogram("dw_convolution_%02d" %
+                                     k + '/activations', dw_h_convs[k])
 
             for k in up_h_convs.keys():
-                tf.summary.histogram("up_convolution_%s" % k + '/activations', up_h_convs[k])
+                tf.summary.histogram("up_convolution_%s" %
+                                     k + '/activations', up_h_convs[k])
 
     variables = []
     for w1, w2 in weights:
@@ -190,11 +202,16 @@ class Unet(object):
         self.n_class = n_class
         self.summaries = kwargs.get("summaries", True)
 
-        self.x = tf.placeholder("float", shape=[None, None, None, channels], name="x")
-        self.y = tf.placeholder("float", shape=[None, None, None, n_class], name="y")
-        self.keep_prob = tf.placeholder(tf.float32, name="dropout_probability")  # dropout (keep probability)
+        self.x = tf.placeholder(
+            "float", shape=[None, None, None, channels], name="x")
+        self.y = tf.placeholder(
+            "float", shape=[None, None, None, n_class], name="y")
+        self.keep_prob = tf.placeholder(
+            tf.float32, name="dropout_probability")  # dropout (keep probability)
 
-        logits, self.variables, self.offset = create_conv_net(self.x, self.keep_prob, channels, n_class, **kwargs)
+        self.logits, self.variables, self.offset = create_conv_net(
+            self.x, self.keep_prob, channels, n_class, **kwargs)
+        logits = self.logits
 
         self.cost = self._get_cost(logits, cost, cost_kwargs)
 
@@ -206,8 +223,10 @@ class Unet(object):
 
         with tf.name_scope("results"):
             self.predicter = pixel_wise_softmax(logits)
-            self.correct_pred = tf.equal(tf.argmax(self.predicter, 3), tf.argmax(self.y, 3))
-            self.accuracy = tf.reduce_mean(tf.cast(self.correct_pred, tf.float32))
+            self.correct_pred = tf.equal(
+                tf.argmax(self.predicter, 3), tf.argmax(self.y, 3))
+            self.accuracy = tf.reduce_mean(
+                tf.cast(self.correct_pred, tf.float32))
 
     def _get_cost(self, logits, cost_name, cost_kwargs):
         """
@@ -224,7 +243,8 @@ class Unet(object):
                 class_weights = cost_kwargs.pop("class_weights", None)
 
                 if class_weights is not None:
-                    class_weights = tf.constant(np.array(class_weights, dtype=np.float32))
+                    class_weights = tf.constant(
+                        np.array(class_weights, dtype=np.float32))
 
                     weight_map = tf.multiply(flat_labels, class_weights)
                     weight_map = tf.reduce_sum(weight_map, axis=1)
@@ -253,7 +273,8 @@ class Unet(object):
 
             regularizer = cost_kwargs.pop("regularizer", None)
             if regularizer is not None:
-                regularizers = sum([tf.nn.l2_loss(variable) for variable in self.variables])
+                regularizers = sum([tf.nn.l2_loss(variable)
+                                    for variable in self.variables])
                 loss += (regularizer * regularizers)
 
             return loss
@@ -275,8 +296,10 @@ class Unet(object):
             # Restore model weights from previously saved model
             self.restore(sess, model_path)
 
-            y_dummy = np.empty((x_test.shape[0], x_test.shape[1], x_test.shape[2], self.n_class))
-            prediction = sess.run(self.predicter, feed_dict={self.x: x_test, self.y: y_dummy, self.keep_prob: 1.})
+            y_dummy = np.empty(
+                (x_test.shape[0], x_test.shape[1], x_test.shape[2], self.n_class))
+            prediction = sess.run(self.predicter, feed_dict={
+                                  self.x: x_test, self.y: y_dummy, self.keep_prob: 1.})
 
         return prediction
 
@@ -318,7 +341,7 @@ class Trainer(object):
 
     """
 
-    def __init__(self, net, batch_size=1, verification_batch_size = 4, norm_grads=False, optimizer="momentum", opt_kwargs={}):
+    def __init__(self, net, batch_size=1, verification_batch_size=4, norm_grads=False, optimizer="momentum", opt_kwargs={}):
         self.net = net
         self.batch_size = batch_size
         self.verification_batch_size = verification_batch_size
@@ -343,7 +366,8 @@ class Trainer(object):
                                                                                global_step=global_step)
         elif self.optimizer == "adam":
             learning_rate = self.opt_kwargs.pop("learning_rate", 0.001)
-            self.learning_rate_node = tf.Variable(learning_rate, name="learning_rate")
+            self.learning_rate_node = tf.Variable(
+                learning_rate, name="learning_rate")
 
             optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_node,
                                                **self.opt_kwargs).minimize(self.net.cost,
@@ -354,7 +378,8 @@ class Trainer(object):
     def _initialize(self, training_iters, output_path, restore, prediction_path):
         global_step = tf.Variable(0, name="global_step")
 
-        self.norm_gradients_node = tf.Variable(tf.constant(0.0, shape=[len(self.net.gradients_node)]), name="norm_gradients")
+        self.norm_gradients_node = tf.Variable(tf.constant(
+            0.0, shape=[len(self.net.gradients_node)]), name="norm_gradients")
 
         if self.net.summaries and self.norm_grads:
             tf.summary.histogram('norm_grads', self.norm_gradients_node)
@@ -408,11 +433,13 @@ class Trainer(object):
         if epochs == 0:
             return save_path
 
-        init = self._initialize(training_iters, output_path, restore, prediction_path)
+        init = self._initialize(
+            training_iters, output_path, restore, prediction_path)
 
         with tf.Session() as sess:
             if write_graph:
-                tf.train.write_graph(sess.graph_def, output_path, "graph.pb", False)
+                tf.train.write_graph(
+                    sess.graph_def, output_path, "graph.pb", False)
 
             sess.run(init)
 
@@ -424,7 +451,8 @@ class Trainer(object):
             test_x, test_y = data_provider(self.verification_batch_size)
             pred_shape = self.store_prediction(sess, test_x, test_y, "_init")
 
-            summary_writer = tf.summary.FileWriter(output_path, graph=sess.graph)
+            summary_writer = tf.summary.FileWriter(
+                output_path, graph=sess.graph)
             logging.info("Start optimization")
 
             avg_gradients = None
@@ -435,14 +463,17 @@ class Trainer(object):
 
                     # Run optimization op (backprop)
                     _, loss, lr, gradients = sess.run(
-                        (self.optimizer, self.net.cost, self.learning_rate_node, self.net.gradients_node),
+                        (self.optimizer, self.net.cost,
+                         self.learning_rate_node, self.net.gradients_node),
                         feed_dict={self.net.x: batch_x,
                                    self.net.y: util.crop_to_shape(batch_y, pred_shape),
                                    self.net.keep_prob: dropout})
 
                     if self.net.summaries and self.norm_grads:
-                        avg_gradients = _update_avg_gradients(avg_gradients, gradients, step)
-                        norm_gradients = [np.linalg.norm(gradient) for gradient in avg_gradients]
+                        avg_gradients = _update_avg_gradients(
+                            avg_gradients, gradients, step)
+                        norm_gradients = [np.linalg.norm(
+                            gradient) for gradient in avg_gradients]
                         self.norm_gradients_node.assign(norm_gradients).eval()
 
                     if step % display_step == 0:
@@ -507,7 +538,8 @@ def _update_avg_gradients(avg_gradients, gradients, step):
     if avg_gradients is None:
         avg_gradients = [np.zeros_like(gradient) for gradient in gradients]
     for i in range(len(gradients)):
-        avg_gradients[i] = (avg_gradients[i] * (1.0 - (1.0 / (step + 1)))) + (gradients[i] / (step + 1))
+        avg_gradients[i] = (
+            avg_gradients[i] * (1.0 - (1.0 / (step + 1)))) + (gradients[i] / (step + 1))
 
     return avg_gradients
 
@@ -518,9 +550,9 @@ def error_rate(predictions, labels):
     """
 
     return 100.0 - (
-            100.0 *
-            np.sum(np.argmax(predictions, 3) == np.argmax(labels, 3)) /
-            (predictions.shape[0] * predictions.shape[1] * predictions.shape[2]))
+        100.0 *
+        np.sum(np.argmax(predictions, 3) == np.argmax(labels, 3)) /
+        (predictions.shape[0] * predictions.shape[1] * predictions.shape[2]))
 
 
 def get_image_summary(img, idx=0):
